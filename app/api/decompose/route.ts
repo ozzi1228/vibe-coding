@@ -1,18 +1,14 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
 
-const client = new Anthropic();
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 export async function POST(req: NextRequest) {
   const { goal } = await req.json();
 
-  const message = await client.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 1024,
-    messages: [
-      {
-        role: "user",
-        content: `사용자의 목표를 실행 가능한 작은 단계로 분해해줘.
+  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+  const result = await model.generateContent(`사용자의 목표를 실행 가능한 작은 단계로 분해해줘.
 각 단계는 5분 이내로 완료 가능한 아주 구체적인 행동이어야 해.
 반드시 JSON 배열만 반환하고 다른 텍스트는 포함하지 마.
 
@@ -24,17 +20,10 @@ export async function POST(req: NextRequest) {
   ...
 ]
 
-최대 6단계까지만 생성해.`,
-      },
-    ],
-  });
+최대 6단계까지만 생성해.`);
 
-  const content = message.content[0];
-  if (content.type !== "text") {
-    return NextResponse.json({ error: "Invalid response" }, { status: 500 });
-  }
-
-  const jsonMatch = content.text.match(/\[[\s\S]*\]/);
+  const text = result.response.text();
+  const jsonMatch = text.match(/\[[\s\S]*\]/);
   if (!jsonMatch) {
     return NextResponse.json({ error: "Parse error" }, { status: 500 });
   }
