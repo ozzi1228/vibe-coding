@@ -1,14 +1,41 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
 
-export async function POST(req: NextRequest) {
-  try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: "GEMINI_API_KEY not set" }, { status: 500 });
-    }
+interface Task {
+  title: string;
+  description: string;
+}
 
-    const { goal } = await req.json();
+function isValidTaskArray(data: unknown): data is Task[] {
+  return (
+    Array.isArray(data) &&
+    data.length > 0 &&
+    data.every(
+      (t) =>
+        t !== null &&
+        typeof t === "object" &&
+        typeof (t as Task).title === "string" &&
+        (t as Task).title.trim().length > 0 &&
+        typeof (t as Task).description === "string"
+    )
+  );
+}
+
+export async function POST(req: NextRequest) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return NextResponse.json({ error: "서버 설정 오류" }, { status: 500 });
+  }
+
+  const body = await req.json().catch(() => null);
+  if (!body || typeof body.goal !== "string" || !body.goal.trim()) {
+    return NextResponse.json({ error: "goal 필드가 필요합니다" }, { status: 400 });
+  }
+
+  // 입력 길이 제한 — 과도한 토큰 소비 방지
+  const goal = body.goal.trim().slice(0, 500);
+
+  try {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
@@ -29,13 +56,29 @@ export async function POST(req: NextRequest) {
     const text = result.response.text();
     const jsonMatch = text.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
-      return NextResponse.json({ error: "AI 응답 파싱 실패" }, { status: 500 });
+      return NextResponse.json({ error: "AI 응답 처리에 실패했습니다" }, { status: 500 });
     }
 
-    const tasks = JSON.parse(jsonMatch[0]);
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(jsonMatch[0]);
+    } catch {
+      return NextResponse.json({ error: "AI 응답 처리에 실패했습니다" }, { status: 500 });
+    }
+
+    if (!isValidTaskArray(parsed)) {
+      return NextResponse.json({ error: "AI 응답 형식이 올바르지 않습니다" }, { status: 500 });
+    }
+
+    // AI가 반환한 필드 외 추가 데이터 제거 + 필드 길이 제한
+    const tasks = parsed.map((t, i) => ({
+      id: i + 1,
+      title: t.title.trim().slice(0, 200),
+      description: t.description.trim().slice(0, 500),
+    }));
+
     return NextResponse.json({ tasks });
-  } catch (e) {
-    console.error(e);
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "AI 서비스 오류가 발생했습니다" }, { status: 500 });
   }
 }

@@ -19,9 +19,11 @@ export default function Home() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleGoalSubmit = async (inputGoal: string) => {
     setLoading(true);
+    setError("");
     try {
       const res = await fetch("/api/decompose", {
         method: "POST",
@@ -29,10 +31,16 @@ export default function Home() {
         body: JSON.stringify({ goal: inputGoal }),
       });
       const data = await res.json();
+      if (!res.ok || !Array.isArray(data.tasks)) {
+        setError(data.error ?? "목표 분석에 실패했어요. 다시 시도해줘.");
+        return;
+      }
       setGoal(inputGoal);
       setTasks(data.tasks);
       setCurrentIndex(0);
       setPhase("task");
+    } catch {
+      setError("네트워크 오류가 발생했어요. 다시 시도해줘.");
     } finally {
       setLoading(false);
     }
@@ -49,23 +57,25 @@ export default function Home() {
   const handleFail = async () => {
     const currentTask = tasks[currentIndex];
     setLoading(true);
+    setError("");
     try {
       const res = await fetch("/api/redecompose", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          task: currentTask.title,
-          description: currentTask.description,
-        }),
+        body: JSON.stringify({ task: currentTask.title, description: currentTask.description }),
       });
       const data = await res.json();
-
-      const newTasks = [
+      if (!res.ok || !Array.isArray(data.tasks)) {
+        setError(data.error ?? "재분해에 실패했어요. 다시 시도해줘.");
+        return;
+      }
+      setTasks([
         ...tasks.slice(0, currentIndex),
         ...data.tasks,
         ...tasks.slice(currentIndex + 1),
-      ];
-      setTasks(newTasks);
+      ]);
+    } catch {
+      setError("네트워크 오류가 발생했어요. 다시 시도해줘.");
     } finally {
       setLoading(false);
     }
@@ -76,16 +86,13 @@ export default function Home() {
     setGoal("");
     setTasks([]);
     setCurrentIndex(0);
+    setError("");
   };
 
-  if (phase === "input") {
-    return <GoalInput onSubmit={handleGoalSubmit} loading={loading} />;
-  }
-
-  if (phase === "complete") {
+  if (phase === "input")
+    return <GoalInput onSubmit={handleGoalSubmit} loading={loading} error={error} />;
+  if (phase === "complete")
     return <TaskComplete goal={goal} onRestart={handleRestart} />;
-  }
-
   return (
     <CurrentTask
       task={tasks[currentIndex]}
@@ -95,6 +102,7 @@ export default function Home() {
       onComplete={handleComplete}
       onFail={handleFail}
       loading={loading}
+      error={error}
     />
   );
 }

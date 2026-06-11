@@ -14,6 +14,7 @@ interface CurrentTaskProps {
   onComplete: () => void;
   onFail: () => void;
   loading: boolean;
+  error?: string;
 }
 
 export default function CurrentTask({
@@ -24,54 +25,66 @@ export default function CurrentTask({
   onComplete,
   onFail,
   loading,
+  error,
 }: CurrentTaskProps) {
-  const progress = (currentIndex / totalCount) * 100;
+  const progress = ((currentIndex + 1) / totalCount) * 100;
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-zinc-950 px-4">
-      <div className="w-full max-w-lg">
-        <div className="mb-6">
-          <p className="text-zinc-500 text-sm mb-1">목표</p>
-          <p className="text-zinc-300 font-medium">{goal}</p>
+    <div className="flex flex-col items-center justify-center min-h-screen px-5 bg-white">
+      <div className="w-full max-w-[420px]">
+        {/* Goal context */}
+        <div className="mb-7">
+          <p className="text-[11px] font-semibold tracking-widest uppercase text-[#b0bfdb] mb-1.5">목표</p>
+          <p className="text-sm text-[#4d6180] font-medium">{goal}</p>
         </div>
 
-        <div className="mb-6">
-          <div className="flex justify-between text-sm text-zinc-500 mb-2">
-            <span>진행도</span>
-            <span>{currentIndex} / {totalCount}</span>
+        {/* Progress */}
+        <div className="mb-8">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-[12px] text-[#b0bfdb]">진행도</span>
+            <span className="text-[12px] font-semibold text-[#0d1b3e] tabular-nums">
+              {currentIndex + 1} / {totalCount}
+            </span>
           </div>
-          <div className="w-full bg-zinc-800 rounded-full h-1.5">
+          <div className="w-full h-[2px] bg-[#eef1f7] rounded-full overflow-hidden">
             <div
-              className="bg-violet-500 h-1.5 rounded-full transition-all duration-500"
+              className="h-full bg-[#0d1b3e] rounded-full transition-all duration-500 ease-out"
               style={{ width: `${progress}%` }}
             />
           </div>
         </div>
 
-        <div className="bg-zinc-900 border border-zinc-700 rounded-3xl p-8 mb-6">
+        {/* Task card */}
+        <div className="rounded-2xl border border-[#dde3ef] bg-[#f8f9fc] p-6 mb-3">
           <div className="flex items-center gap-2 mb-4">
-            <span className="text-xs font-semibold text-violet-400 bg-violet-400/10 px-3 py-1 rounded-full">
+            <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-[#0d1b3e] text-white">
               지금 할 일
             </span>
-            <span className="text-xs text-zinc-600">#{currentIndex + 1}</span>
+            <span className="text-[12px] text-[#b0bfdb]">#{currentIndex + 1}</span>
           </div>
-
-          <h2 className="text-2xl font-bold text-white mb-3">{task.title}</h2>
-          <p className="text-zinc-400 text-base leading-relaxed">{task.description}</p>
+          <h2 className="font-bold text-[#0d1b3e] leading-tight tracking-tight mb-2.5" style={{ fontSize: "1.5rem" }}>
+            {task.title}
+          </h2>
+          <p className="text-[14px] text-[#4d6180] leading-relaxed">{task.description}</p>
         </div>
 
+        {error && <p className="text-sm text-red-500 mb-3">{error}</p>}
+
+        <p className="text-[12px] text-[#b0bfdb] text-center mb-4">못 하겠으면 더 작게 쪼개줄게</p>
+
+        {/* Buttons */}
         <div className="grid grid-cols-2 gap-3">
           <button
             onClick={onFail}
             disabled={loading}
-            className="bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-zinc-300 font-semibold py-4 rounded-2xl transition-colors"
+            className="py-[13px] rounded-xl text-[15px] font-semibold text-[#4d6180] border border-[#dde3ef] hover:bg-[#f4f6fb] hover:text-[#0d1b3e] hover:border-[#b0bfdb] disabled:opacity-40 disabled:cursor-not-allowed transition-colors duration-150"
           >
-            {loading ? "..." : "못 했어 😔"}
+            {loading ? "..." : "못 했어"}
           </button>
           <button
             onClick={onComplete}
             disabled={loading}
-            className="bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white font-semibold py-4 rounded-2xl transition-colors"
+            className="py-[13px] rounded-xl text-[15px] font-semibold text-white bg-[#0d1b3e] hover:bg-[#162952] disabled:opacity-40 disabled:cursor-not-allowed transition-colors duration-150"
           >
             완료했어 ✓
           </button>
