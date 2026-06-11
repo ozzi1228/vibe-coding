@@ -78,7 +78,8 @@ export async function POST(req: NextRequest) {
     }));
 
     return NextResponse.json({ tasks });
-  } catch {
+  } catch (e) {
+    console.error("[decompose] Gemini error:", e instanceof Error ? e.message : String(e));
     return NextResponse.json({ error: "AI 서비스 오류가 발생했습니다" }, { status: 500 });
   }
 }
